@@ -1,13 +1,15 @@
-package com.eddranca.containerws.client
+package com.eddranca.containerws.client.github
 
+import com.eddranca.containerws.client.github.exceptions.ResetTokenException
+import com.eddranca.containerws.client.github.model.ResetTokenRequest
+import com.eddranca.containerws.client.github.model.ResetTokenResponse
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.WebClient.RequestHeadersSpec
 import org.springframework.web.reactive.function.client.bodyToMono
-import java.lang.RuntimeException
-import java.util.Base64
+import java.util.*
 
 @Component
 class GithubAppClient(@Value("\${spring.security.oauth2.client.registration.github.clientId}") private val clientId: String,
@@ -19,15 +21,14 @@ class GithubAppClient(@Value("\${spring.security.oauth2.client.registration.gith
         const val ACCEPT_HEADER = "application/vnd.github+json"
     }
 
-    fun resetOauthToken(currentToken: String): String {
-        return addHeaders(this.webClient.patch()
-            .uri("/applications/{clientId}/token", mapOf(Pair("clientId", clientId)))
-            .bodyValue(mapOf(Pair("access_token", currentToken))))
+    fun resetOauthToken(resetTokenRequest: ResetTokenRequest): String {
+        val resetTokenResponse = addHeaders(this.webClient.patch()
+            .uri("/applications/{clientId}/token", clientId)
+            .bodyValue(resetTokenRequest))
             .retrieve()
-            .bodyToMono<Map<String, String>>()
+            .bodyToMono<ResetTokenResponse>()
             .block()
-            ?.get("access_token") ?:
-            throw RuntimeException("Could not reset OAuth Token.")
+        return resetTokenResponse?.token ?: throw ResetTokenException("GHO Token reset failed. Token might be invalid!")
     }
 
     private fun addHeaders(request: RequestHeadersSpec<*>): RequestHeadersSpec<*> {
