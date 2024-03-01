@@ -1,31 +1,31 @@
 package com.eddranca.containerws.controller
 
+import com.eddranca.api.WorkspacesApi
 import com.eddranca.containerws.service.UserService
 import com.eddranca.containerws.util.GitUtil
-import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService
+import com.eddranca.model.CreateWorkspaceRequest
+import org.springframework.http.ResponseEntity
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.core.user.OAuth2User
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
-import java.util.concurrent.Callable
-import java.util.concurrent.ExecutorCompletionService
-import java.util.concurrent.ForkJoinPool
-import java.util.stream.IntStream
+import javax.validation.Valid
 
 
 @RestController
-class WorkspaceController(val gitUtil: GitUtil, val userService: UserService) {
-    @GetMapping("/workspaces")
-    fun createWorkspace(@RequestParam repo: String): String {
+class WorkspaceController(val gitUtil: GitUtil, val userService: UserService): WorkspacesApi {
+
+    @PostMapping("/workspaces")
+    override fun createWorkspace(@Valid @RequestBody createWorkspaceRequest: CreateWorkspaceRequest): ResponseEntity<Void> {
         val authentication = SecurityContextHolder.getContext().authentication
 
         if (authentication.principal !is OAuth2User) {
             throw RuntimeException("exception")
         }
         val oauth2User = authentication.principal as OAuth2User
-        userService.getToken(oauth2User.attributes["id"]!! as Int)?.let { gitUtil.cloneGitHubRepos(listOf(repo), it) }
-        return ""
+        userService.getToken(oauth2User.attributes["id"]!! as Int)?.let { gitUtil.cloneGitHubRepos(createWorkspaceRequest.repositories, it) }
+        return ResponseEntity.accepted().build()
     }
 
 }

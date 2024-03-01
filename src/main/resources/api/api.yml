@@ -1,0 +1,53 @@
+openapi: "3.0.0"
+info:
+  title: Workspace Creation API
+  description: API for creating new workspaces with a list of repositories.
+  version: 1.0.0
+servers:
+  - url: https://localhost:8080 # Replace with your base URL
+paths:
+  /workspaces:
+    post:
+      operationId: createWorkspace  # A unique identifier for the operation
+      tags:
+        - Workspaces
+      summary: Create a new workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '202':
+          description: Workspace creation initiated (asynchronous)
+        '400':
+          description: Bad request. May include specific errors.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvalidRepositoriesError'
+        '500':
+          description: Internal server error
+components:
+  schemas:
+    CreateWorkspaceRequest:
+      type: object
+      properties:
+        repositories:
+          $ref: '#/components/schemas/RepositoryList'
+    InvalidRepositoriesError:
+      type: object
+      properties:
+        message:
+          type: string
+          description: Reason for the invalid repositories error
+          example:  "Invalid repository format or repository not found."
+        repositories:
+          $ref: '#/components/schemas/RepositoryList'
+    RepositoryList:
+      type: array
+      items:
+        type: string
+        format: uri
+        pattern: ^https://github\.com/([\w-]+)/([\w-]+)\.git$

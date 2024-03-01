@@ -4,6 +4,7 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.io.IOException
+import java.net.URI
 import java.util.regex.Pattern
 
 
@@ -24,8 +25,8 @@ class GitUtil {
      * @param repoUrls List containing GitHub repository URLs.
      * @throws InvalidGitHubRepoException If one or more GitHub repository URLs are invalid.
      */
-    fun cloneGitHubRepos(repoUrls: List<String>, ghoToken: String) {
-        val invalidRepos = mutableListOf<String>()
+    fun cloneGitHubRepos(repoUrls: List<URI>, ghoToken: String) {
+        val invalidRepos = mutableListOf<URI>()
 
         repoUrls.forEach { repoUrl ->
             if (!isValidGitHubRepoUrl(repoUrl)) {
@@ -50,8 +51,8 @@ class GitUtil {
      * @param url GitHub repository URL to be validated.
      * @return True if the URL is valid, false otherwise.
      */
-    private fun isValidGitHubRepoUrl(url: String): Boolean {
-        val matcher = GITHUB_REPO_PATTERN.matcher(url)
+    private fun isValidGitHubRepoUrl(url: URI): Boolean {
+        val matcher = GITHUB_REPO_PATTERN.matcher(url.toString())
         return matcher.matches()
     }
 
@@ -60,10 +61,10 @@ class GitUtil {
      *
      * @param repoUrl GitHub repository URL to be cloned.
      */
-    private fun cloneRepo(repoUrl: String, ghoToken: String) {
+    private fun cloneRepo(repoUrl: URI, ghoToken: String) {
         try {
 
-            val processBuilder = ProcessBuilder("git", "clone", repoUrl)
+            val processBuilder = ProcessBuilder("git", "clone", repoUrl.toString())
             val process = processBuilder.start()
             // Write the username to the process input stream
             process.outputStream.write(("oauth2\n".encodeToByteArray()))
@@ -95,4 +96,4 @@ class GitUtil {
  * @param message The error message.
  * @param invalidRepos List of invalid GitHub repository URLs.
  */
-class InvalidGitHubRepoException(override val message: String, val invalidRepos: List<String>) : RuntimeException(message)
+class InvalidGitHubRepoException(override val message: String, val invalidRepos: List<URI>) : RuntimeException(message)
