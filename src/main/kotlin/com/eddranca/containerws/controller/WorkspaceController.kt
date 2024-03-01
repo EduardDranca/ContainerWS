@@ -19,12 +19,6 @@ class WorkspaceController(val gitUtil: GitUtil, val userService: UserService) {
     @GetMapping("/workspaces")
     fun createWorkspace(@RequestParam repo: String): String {
         val authentication = SecurityContextHolder.getContext().authentication
-        val delegator = DelegatingSecurityContextExecutorService(ForkJoinPool())
-        val completionService = ExecutorCompletionService<Boolean>(delegator)
-        val fs = IntStream.range(0, 100)
-            .mapToObj {
-                completionService.submit(Callable { it % 2 == 0 })
-            }
 
         if (authentication.principal !is OAuth2User) {
             throw RuntimeException("exception")
