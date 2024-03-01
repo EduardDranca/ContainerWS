@@ -3,9 +3,6 @@ package com.eddranca.containerws.util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import org.springframework.web.context.request.RequestContextHolder
-import org.springframework.web.servlet.DispatcherServlet
-import org.springframework.web.servlet.FrameworkServlet
 import java.io.IOException
 import java.util.regex.Pattern
 
@@ -20,7 +17,6 @@ class GitUtil {
         private val GITHUB_REPO_PATTERN: Pattern = "^https://github\\.com/([\\w-]+)/([\\w-]+)\\.git$".toPattern()
     }
     private val logger: Logger = LoggerFactory.getLogger(this::class.java)
-    private var notDone = true
 
     /**
      * Clones GitHub repositories based on the provided configuration map.
@@ -32,9 +28,7 @@ class GitUtil {
         val invalidRepos = mutableListOf<String>()
 
         repoUrls.forEach { repoUrl ->
-            if (isValidGitHubRepoUrl(repoUrl)) {
-                cloneRepo(repoUrl, ghoToken)
-            } else {
+            if (!isValidGitHubRepoUrl(repoUrl)) {
                 invalidRepos.add(repoUrl)
             }
         }
@@ -42,6 +36,10 @@ class GitUtil {
         if (invalidRepos.isNotEmpty()) {
             logger.warn("The repoUrls list contained some invalid GitHub repo links: $invalidRepos.")
             throw InvalidGitHubRepoException("Invalid GitHub repository URLs: $invalidRepos", invalidRepos)
+        }
+
+        repoUrls.forEach { repoUrl ->
+            cloneRepo(repoUrl, ghoToken)
         }
     }
 
@@ -67,16 +65,13 @@ class GitUtil {
 
             val processBuilder = ProcessBuilder("git", "clone", repoUrl)
             val process = processBuilder.start()
-            if (notDone) {
-                // Write the username to the process input stream
-                process.outputStream.write(("oauth2\n".encodeToByteArray()))
-                process.outputStream.flush()
+            // Write the username to the process input stream
+            process.outputStream.write(("oauth2\n".encodeToByteArray()))
+            process.outputStream.flush()
 
-                // Write the password to the process input stream
-                process.outputStream.write((ghoToken + "\n").encodeToByteArray())
-                process.outputStream.flush()
-                notDone = true
-            }
+            // Write the password to the process input stream
+            process.outputStream.write((ghoToken + "\n").encodeToByteArray())
+            process.outputStream.flush()
 
             val exitCode = process.waitFor()
 
@@ -86,9 +81,9 @@ class GitUtil {
                 logger.warn("Failed to clone repository: $repoUrl")
             }
         } catch (e: IOException) {
-            e.printStackTrace()
+            logger.error("Error cloning repository: $repoUrl", e)
         } catch (e: InterruptedException) {
-            e.printStackTrace()
+            logger.error("Interrupted while cloning repository: $repoUrl", e)
             Thread.currentThread().interrupt()
         }
     }
@@ -100,4 +95,4 @@ class GitUtil {
  * @param message The error message.
  * @param invalidRepos List of invalid GitHub repository URLs.
  */
-class InvalidGitHubRepoException(message: String, val invalidRepos: List<String>) : RuntimeException(message)
+class InvalidGitHubRepoException(override val message: String, val invalidRepos: List<String>) : RuntimeException(message)
