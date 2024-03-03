@@ -1,0 +1,9 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            clientId: test-client
+            clientSecret: test-secret
+            scope: repo
