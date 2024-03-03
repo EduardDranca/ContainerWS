@@ -23,27 +23,24 @@ class GithubAppClient(@Value("\${spring.security.oauth2.client.registration.gith
     }
 
     fun resetOauthToken(resetTokenRequest: ResetTokenRequest): String {
-        try {
+        val newToken = try {
             val resetTokenResponse = addHeaders(this.restClient.patch()
                     .uri(GITHUB_RESET_TOKEN_URL, clientId)
                     .body(resetTokenRequest))
                     .retrieve()
                     .body(ResetTokenResponse::class.java)
-            return resetTokenResponse?.token ?: throw ResetTokenException(message = "GHO Token reset failed. Token might be invalid!")
+            resetTokenResponse?.token
         } catch (e: Exception) {
-            throw handleException(e)
+            throw ResetTokenException("Exception thrown while resetting user GHO token. Token might be invalid!", e)
         }
+        if (newToken == null) {
+            throw ResetTokenException("GHO Token reset failed. Token might be invalid!")
+        }
+        return newToken
     }
 
     private fun addHeaders(request: RequestHeadersSpec<*>): RequestHeadersSpec<*> {
         return request.header(HttpHeaders.ACCEPT, ACCEPT_HEADER)
             .header(HttpHeaders.AUTHORIZATION, "Basic $basicAuth")
-    }
-
-    private fun handleException(e: Exception): ResetTokenException {
-        if (e is ResetTokenException) {
-            return e
-        }
-        return ResetTokenException("GHO Token reset failed. Token might be invalid!", e)
     }
 }

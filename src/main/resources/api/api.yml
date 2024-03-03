@@ -36,6 +36,10 @@ components:
       properties:
         repositories:
           $ref: '#/components/schemas/RepositoryList'
+        cpuLimit:
+          $ref: '#/components/schemas/CPULimit'
+        memoryLimit:
+          $ref: '#/components/schemas/MemoryLimit'
     InvalidRepositoriesError:
       type: object
       properties:
@@ -51,3 +55,11 @@ components:
         type: string
         format: uri
         pattern: ^https://github\.com/([\w-]+)/([\w-]+)\.git$
+    CPULimit:
+      type: integer
+      minimum: 256
+      maximum: 8192
+    MemoryLimit:
+      type: integer
+      minimum: 512
+      maximum: 8192

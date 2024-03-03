@@ -6,23 +6,27 @@ import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserServ
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Service
-import java.lang.RuntimeException
 
 @Service
-class UserService(val githubClient: GithubAppClient): DefaultOAuth2UserService() {
-    private val userMap: MutableMap<Int, String> = HashMap()
+class UserService(private val githubClient: GithubAppClient, private val secretsService: SecretsService): DefaultOAuth2UserService() {
     override fun loadUser(userRequest: OAuth2UserRequest): OAuth2User {
         val oauth2User = super.loadUser(userRequest)
-        userMap[oauth2User.attributes["id"]!! as Int] = userRequest.accessToken.tokenValue
+        val userId = oauth2User.attributes["id"] as String
+        secretsService.storeUserGHO(userId, userRequest.accessToken.tokenValue)
         return oauth2User
     }
 
-    fun getToken(clientId: Int): String? {
-        return userMap[clientId]
+    fun getToken(userId: String): String? {
+        return secretsService.getUserGHO(userId)
     }
 
-    fun resetToken(clientId: Int): String {
-        userMap.computeIfPresent(clientId) { _, currentToken -> githubClient.resetOauthToken(ResetTokenRequest(currentToken)) }
-        return userMap[clientId] ?: throw RuntimeException("blabla")
+    fun resetToken(userId: String): String {
+        // TODO: If token reset fails, we could check if the old token is still valid.
+        // If the token is still valid, we can still use it, if not,
+        // then we'll have to prompt the user to reload the website in their browser to hopefully get a new token?
+        val oldUserToken = secretsService.getUserGHO(userId)
+        val newUserToken = githubClient.resetOauthToken(ResetTokenRequest(oldUserToken))
+        secretsService.storeUserGHO(userId, newUserToken)
+        return newUserToken
     }
 }
