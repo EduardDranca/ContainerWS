@@ -53,6 +53,7 @@ tasks.withType<KotlinCompile> {
 		freeCompilerArgs += "-Xjsr305=strict"
 		jvmTarget = "17"
 	}
+	dependsOn(tasks.openApiGenerate)
 }
 
 tasks.withType<Test> {
