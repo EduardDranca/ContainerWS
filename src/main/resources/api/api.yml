@@ -4,7 +4,7 @@ info:
   description: API for creating new workspaces with a list of repositories.
   version: 1.0.0
 servers:
-  - url: https://localhost:8080 # Replace with your base URL
+  - url: http://localhost:8080 # Replace with your base URL
 paths:
   /workspaces:
     post:
