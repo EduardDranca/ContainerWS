@@ -12,6 +12,5 @@ class GithubConfig {
     @Bean("github-web-client")
     fun githubWebClient(): RestClient {
         return RestClient.create(BASE_URL)
-
     }
 }

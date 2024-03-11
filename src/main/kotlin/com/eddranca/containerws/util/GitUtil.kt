@@ -3,6 +3,7 @@ package com.eddranca.containerws.util
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.io.File
 import java.io.IOException
 import java.net.URI
 import java.util.regex.Pattern
@@ -13,7 +14,6 @@ import java.util.regex.Pattern
  */
 @Component
 class GitUtil {
-
     companion object {
         private val GITHUB_REPO_PATTERN: Pattern = "^https://github\\.com/([\\w-]+)/([\\w-]+)\\.git$".toPattern()
     }
@@ -25,7 +25,7 @@ class GitUtil {
      * @param repoUrls List containing GitHub repository URLs.
      * @throws InvalidGitHubRepoException If one or more GitHub repository URLs are invalid.
      */
-    fun cloneGitHubRepos(repoUrls: List<URI>, ghoToken: String) {
+    fun cloneGitHubRepos(repoUrls: List<URI>, ghoToken: String): List<File> {
         val invalidRepos = mutableListOf<URI>()
 
         repoUrls.forEach { repoUrl ->
@@ -39,9 +39,9 @@ class GitUtil {
             throw InvalidGitHubRepoException("Invalid GitHub repository URLs: $invalidRepos", invalidRepos)
         }
 
-        repoUrls.forEach { repoUrl ->
+        return repoUrls.map { repoUrl ->
             cloneRepo(repoUrl, ghoToken)
-        }
+        }.toList()
     }
 
 
@@ -61,10 +61,11 @@ class GitUtil {
      *
      * @param repoUrl GitHub repository URL to be cloned.
      */
-    private fun cloneRepo(repoUrl: URI, ghoToken: String) {
+    private fun cloneRepo(repoUrl: URI, ghoToken: String): File {
+        val cloneDirectory = File("/Users/eduarddranca/repos")
         try {
-
             val processBuilder = ProcessBuilder("git", "clone", repoUrl.toString())
+            processBuilder.directory(cloneDirectory)
             val process = processBuilder.start()
             // Write the username to the process input stream
             process.outputStream.write(("oauth2\n".encodeToByteArray()))
@@ -75,7 +76,6 @@ class GitUtil {
             process.outputStream.flush()
 
             val exitCode = process.waitFor()
-
             if (exitCode == 0) {
                 logger.info("Successfully cloned repository: $repoUrl")
             } else {
@@ -87,6 +87,7 @@ class GitUtil {
             logger.error("Interrupted while cloning repository: $repoUrl", e)
             Thread.currentThread().interrupt()
         }
+        return File(cloneDirectory, repoUrl.path.substringAfterLast('/').dropLast(4))
     }
 }
 
