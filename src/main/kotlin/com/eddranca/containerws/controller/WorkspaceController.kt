@@ -16,8 +16,10 @@ class WorkspaceController(private val workspaceService: WorkspaceService,
 
     @PostMapping("/workspaces")
     override fun createWorkspace(createWorkspaceRequest: CreateWorkspaceRequest): ResponseEntity<Void> {
+        //TODO: Add a body to the response
         val userId = userExtractorUtil.extractUserId(SecurityContextHolder.getContext().authentication)
         workspaceService.createWorkspace(userId, createWorkspaceRequest)
-        return ResponseEntity.accepted().build()
+        return ResponseEntity.accepted()
+                .build()
     }
 }

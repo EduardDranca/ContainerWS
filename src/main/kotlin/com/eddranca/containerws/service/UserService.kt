@@ -2,6 +2,7 @@ package com.eddranca.containerws.service
 
 import com.eddranca.containerws.client.github.GithubAppClient
 import com.eddranca.containerws.client.github.exceptions.ResetTokenException
+import com.eddranca.containerws.service.secrets.SecretsService
 import com.eddranca.containerws.util.UserExtractorUtil
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
@@ -10,8 +11,8 @@ import org.springframework.stereotype.Service
 
 @Service
 class UserService(private val githubClient: GithubAppClient,
-                  private val secretsService: SecretsService,
-                  private val userExtractorUtil: UserExtractorUtil): DefaultOAuth2UserService() {
+                  private val userExtractorUtil: UserExtractorUtil,
+                  private val secretsService: SecretsService<String, String>): DefaultOAuth2UserService() {
     /**
      * @param userRequest The OAuth2UserRequest object containing the user's access token.
      * @return The OAuth2User object containing the user's information.
@@ -21,9 +22,9 @@ class UserService(private val githubClient: GithubAppClient,
         val userId = userExtractorUtil.extractUserId(oauth2User)
         val userToken = getToken(userId)
         if (userToken == null || !githubClient.isTokenValid(userToken)) {
-            secretsService.storeUserGHO(userId, userRequest.accessToken.tokenValue)
+            secretsService.setSecret(userId, userRequest.accessToken.tokenValue)
         }
-        return oauth2User
+        return oauth2User;
     }
 
     /**
@@ -32,7 +33,8 @@ class UserService(private val githubClient: GithubAppClient,
      * @return The user's GitHub access token.
      */
     fun getToken(userId: String): String? {
-        return secretsService.getUserGHO(userId)
+        // TODO: Think about reauthenticating the user here if necessary
+        return secretsService.getSecret(userId)
     }
 
     /**
@@ -43,16 +45,16 @@ class UserService(private val githubClient: GithubAppClient,
      */
     fun resetUserToken(userId: String): String {
         // TODO: Create a better exception
-        val oldUserToken = secretsService.getUserGHO(userId) ?: throw RuntimeException("Token not found for user: $userId")
+        val oldUserToken = secretsService.getSecret(userId) ?: throw RuntimeException("Token not found for user: $userId")
         try {
             val newUserToken = githubClient.resetOauthToken(oldUserToken)
-            secretsService.storeUserGHO(userId, newUserToken)
+            secretsService.setSecret(userId, newUserToken)
             return newUserToken
         } catch (e: ResetTokenException) {
             if (githubClient.isTokenValid(oldUserToken)) {
                 return oldUserToken
             }
-            secretsService.removeUserGHO(userId)
+            secretsService.removeSecret(userId)
             throw e
         }
     }

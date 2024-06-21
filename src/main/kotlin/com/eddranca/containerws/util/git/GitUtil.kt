@@ -1,11 +1,13 @@
-package com.eddranca.containerws.util
+package com.eddranca.containerws.util.git
 
+import org.apache.tomcat.util.http.fileupload.FileUtils
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.io.File
 import java.io.IOException
 import java.net.URI
+import java.util.*
 import java.util.regex.Pattern
 
 
@@ -17,7 +19,7 @@ class GitUtil {
     companion object {
         private val GITHUB_REPO_PATTERN: Pattern = "^https://github\\.com/([\\w-]+)/([\\w-]+)\\.git$".toPattern()
     }
-    private val logger: Logger = LoggerFactory.getLogger(this::class.java)
+    private final val logger: Logger = LoggerFactory.getLogger(GitUtil::class.java)
 
     /**
      * Clones GitHub repositories based on the provided configuration map.
@@ -25,23 +27,32 @@ class GitUtil {
      * @param repoUrls List containing GitHub repository URLs.
      * @throws InvalidGitHubRepoException If one or more GitHub repository URLs are invalid.
      */
-    fun cloneGitHubRepos(repoUrls: List<URI>, ghoToken: String): List<File> {
-        val invalidRepos = mutableListOf<URI>()
+    fun cloneGitHubRepos(repoUrls: List<URI>, ghoToken: String): CloneReposResponse {
+        val cloneDirectory = File("/tmp/repos/${UUID.randomUUID()}")
+        FileUtils.forceMkdir(cloneDirectory)
+        validateRepos(repoUrls)
 
-        repoUrls.forEach { repoUrl ->
-            if (!isValidGitHubRepoUrl(repoUrl)) {
-                invalidRepos.add(repoUrl)
-            }
-        }
+        val repos = repoUrls.map { repoUrl ->
+            cloneRepo(repoUrl, ghoToken, cloneDirectory)
+        }.toList()
 
-        if (invalidRepos.isNotEmpty()) {
+        return CloneReposResponse(cloneDirectory, repos)
+    }
+
+    /**
+     * Validates if the given list of GitHub repository URLs are valid.
+     * If any URL is invalid, an InvalidGitHubRepoException is thrown.
+     *
+     * @param repoUrls List containing GitHub repository URLs.
+     * @throws InvalidGitHubRepoException If one or more GitHub repository URLs are invalid.
+     */
+    fun validateRepos(repoUrls:  List<URI>) {
+        val invalidRepos = repoUrls.filter { repoUrl -> !isValidGitHubRepoUrl(repoUrl) }
+                .toList()
+        if  (invalidRepos.isNotEmpty()) {
             logger.warn("The repoUrls list contained some invalid GitHub repo links: $invalidRepos.")
             throw InvalidGitHubRepoException("Invalid GitHub repository URLs: $invalidRepos", invalidRepos)
         }
-
-        return repoUrls.map { repoUrl ->
-            cloneRepo(repoUrl, ghoToken)
-        }.toList()
     }
 
 
@@ -52,6 +63,7 @@ class GitUtil {
      * @return True if the URL is valid, false otherwise.
      */
     private fun isValidGitHubRepoUrl(url: URI): Boolean {
+        //TODO: use the fact that this is a URI
         val matcher = GITHUB_REPO_PATTERN.matcher(url.toString())
         return matcher.matches()
     }
@@ -61,8 +73,7 @@ class GitUtil {
      *
      * @param repoUrl GitHub repository URL to be cloned.
      */
-    private fun cloneRepo(repoUrl: URI, ghoToken: String): File {
-        val cloneDirectory = File("/Users/eduarddranca/repos")
+    private fun cloneRepo(repoUrl: URI, ghoToken: String, cloneDirectory: File): File {
         try {
             val processBuilder = ProcessBuilder("git", "clone", repoUrl.toString())
             processBuilder.directory(cloneDirectory)

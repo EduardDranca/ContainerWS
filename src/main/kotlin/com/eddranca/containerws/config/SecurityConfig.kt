@@ -24,4 +24,17 @@ class SecurityConfig {
                 .oauth2Login(withDefaults())
         return http.build()
     }
+
+    @Bean
+    @Profile("local")
+    fun filterChainLocal(http: HttpSecurity): SecurityFilterChain? {
+        http.authorizeHttpRequests { authz -> authz
+                .requestMatchers("/login").permitAll()
+                .anyRequest()
+                .fullyAuthenticated()
+        }
+                .csrf { csrf -> csrf.disable() }
+                .oauth2Login(withDefaults())
+        return http.build()
+    }
 }

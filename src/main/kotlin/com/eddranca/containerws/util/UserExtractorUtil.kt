@@ -10,6 +10,7 @@ class UserExtractorUtil {
         private const val USER_ID_ATTRIBUTE = "id"
     }
 
+    //TODO: This I don't like
     fun extractUserId(authentication: Authentication): String {
         val oauth2User = authentication.principal as OAuth2User
         return extractUserId(oauth2User)
