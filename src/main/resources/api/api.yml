@@ -4,7 +4,7 @@ info:
   description: API for creating new workspaces with a list of repositories.
   version: 1.0.0
 servers:
-  - url: https://localhost:8080 # Replace with your base URL
+  - url: http://localhost:8080 # Replace with your base URL
 paths:
   /workspaces:
     post:
@@ -36,6 +36,10 @@ components:
       properties:
         repositories:
           $ref: '#/components/schemas/RepositoryList'
+        cpuLimit:
+          $ref: '#/components/schemas/CPULimit'
+        memoryLimit:
+          $ref: '#/components/schemas/MemoryLimit'
     InvalidRepositoriesError:
       type: object
       properties:
@@ -51,3 +55,11 @@ components:
         type: string
         format: uri
         pattern: ^https://github\.com/([\w-]+)/([\w-]+)\.git$
+    CPULimit:
+      type: integer
+      minimum: 256
+      maximum: 8192
+    MemoryLimit:
+      type: integer
+      minimum: 512
+      maximum: 8192
